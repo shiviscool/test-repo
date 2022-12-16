@@ -11,6 +11,11 @@ import org.lwjgl.system.MemoryStack;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL30.glGenerateMipmap;
+import static org.lwjgl.stb.STBImage.stbi_image_free;
+import static org.lwjgl.stb.STBImage.stbi_load;
+
 public class Main {
     public static void main(String[] args) {
         GLFWErrorCallback.createPrint(System.err).set();
@@ -54,24 +59,28 @@ public class Main {
         IntBuffer height = MemoryStack.stackMallocInt(1);
         IntBuffer channels = MemoryStack.stackMallocInt(1);
 
-        ByteBuffer image = STBImage.stbi_load("/home/mainuser/Downloads/background.png", width, height, channels, 4);
+        ByteBuffer image = stbi_load("/home/mainuser/Downloads/background.png", width, height, channels, 4);
 
         if (image == null) {
             throw new RuntimeException("Failed to load image: " + STBImage.stbi_failure_reason());
         }
 
         int texture = GL11.glGenTextures();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
 
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        GL11.glBindTexture(GL_TEXTURE_2D, texture);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE,image);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
+        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
+        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
 
         while (!GLFW.glfwWindowShouldClose(window)) {
             GLFW.glfwPollEvents();
 
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+            GL11.glBindTexture(GL_TEXTURE_2D, texture);
 
             GL11.glBegin(GL11.GL_QUADS);
             GL11.glTexCoord2f(0f, 0f);
@@ -88,5 +97,7 @@ public class Main {
 
             GLFW.glfwSwapBuffers(window);
         }
+
+        stbi_image_free(image);
     }
 }
