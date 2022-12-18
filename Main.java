@@ -1,103 +1,69 @@
-package com.source;
+package com.engine;
 
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWVidMode;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.stb.STBImage;
-import org.lwjgl.system.MemoryStack;
+
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
+import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL14.GL_MIRRORED_REPEAT;
 import static org.lwjgl.opengl.GL30.glGenerateMipmap;
 import static org.lwjgl.stb.STBImage.stbi_image_free;
 import static org.lwjgl.stb.STBImage.stbi_load;
 
-public class Main {
+public class Main  {
     public static void main(String[] args) {
-        GLFWErrorCallback.createPrint(System.err).set();
+        glfwInit();
 
-        if (!GLFW.glfwInit()) {
-            throw new IllegalStateException("Unable to initialize GLFW");
-        }
+        long window = glfwCreateWindow(1920,1080,"",0L,0L);
 
-        GLFW.glfwDefaultWindowHints();
-        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
-        GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_TRUE);
 
-        long window = GLFW.glfwCreateWindow(1920, 1080, "", 0, 0);
-        if (window == 0) {
-            throw new RuntimeException("Failed to create the GLFW window");
-        }
+        float texCoords[] = {
+                0.0f, 0.0f,  // lower-left corner
+                1.0f, 0.0f,  // lower-right corner
+                0.5f, 1.0f   // top-center corner
+        };
 
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer pWidth = stack.mallocInt(1);
-            IntBuffer pHeight = stack.mallocInt(1);
-
-            GLFW.glfwGetWindowSize(window, pWidth, pHeight);
-
-            GLFWVidMode vidmode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
-
-            GLFW.glfwSetWindowPos(
-                    window,
-                    (vidmode.width() - pWidth.get(0)) / 2,
-                    (vidmode.height() - pHeight.get(0)) / 2
-            );
-        }
-
-        GLFW.glfwMakeContextCurrent(window);
-        GLFW.glfwSwapInterval(1);
-
-        GLFW.glfwShowWindow(window);
-
+        glfwMakeContextCurrent(window);
         GL.createCapabilities();
 
-        IntBuffer width = MemoryStack.stackMallocInt(1);
-        IntBuffer height = MemoryStack.stackMallocInt(1);
-        IntBuffer channels = MemoryStack.stackMallocInt(1);
+        glfwSwapInterval(1);
 
-        ByteBuffer image = stbi_load("/home/mainuser/Downloads/background.png", width, height, channels, 4);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 
-        if (image == null) {
-            throw new RuntimeException("Failed to load image: " + STBImage.stbi_failure_reason());
-        }
+        float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-        int texture = GL11.glGenTextures();
 
-        GL11.glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE,image);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        IntBuffer width = BufferUtils.createIntBuffer(1)
+                ,height = BufferUtils.createIntBuffer(1)
+                ,channels = BufferUtils.createIntBuffer(1);
+
+        ByteBuffer data = stbi_load("/home/shivc/Downloads/background.png",width,height,channels,0);
+
+        int texture = glGenTextures();
+
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE,data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
-        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
-        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        glfwShowWindow(window);
 
-        while (!GLFW.glfwWindowShouldClose(window)) {
-            GLFW.glfwPollEvents();
-
-            GL11.glBindTexture(GL_TEXTURE_2D, texture);
-
-            GL11.glBegin(GL11.GL_QUADS);
-            GL11.glTexCoord2f(0f, 0f);
-            GL11.glVertex2f(0f, 0f);
-            GL11.glTexCoord2f(0f, 1f);
-            GL11.glVertex2f(0f, 1f);
-            GL11.glTexCoord2f(1f, 0f);
-            GL11.glVertex2f(1f, 0f);
-            GL11.glTexCoord2f(1f, 1f);
-            GL11.glVertex2f(1f, 1f);
-            GL11.glEnd();
-
-            // render here
-
-            GLFW.glfwSwapBuffers(window);
+        while(!glfwWindowShouldClose(window)) {
+            glfwPollEvents();
+            glfwSwapBuffers(window);
         }
 
-        stbi_image_free(image);
+        stbi_image_free(data);
     }
 }
